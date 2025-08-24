@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Knowlers Scraper API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .form-group {
+            margin: 10px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, button {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .status {
+            text-align: center;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .logged-in {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .logged-out {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Knowlers Scraper API</h1>
+        
+        <div id="status" class="status logged-out">
+            Estado: Desconectado
+        </div>
+
+        <!-- Sección de Login -->
+        <div class="section">
+            <h2>🔐 Iniciar Sesión</h2>
+            <div class="form-group">
+                <label for="username">Usuario:</label>
+                <input type="text" id="username" placeholder="Ingrese su usuario">
+            </div>
+            <div class="form-group">
+                <label for="password">Contraseña:</label>
+                <input type="password" id="password" placeholder="Ingrese su contraseña">
+            </div>
+            <button onclick="login()">Iniciar Sesión</button>
+            <button onclick="logout()" style="background-color: #dc3545;">Cerrar Sesión</button>
+        </div>
+
+        <!-- Sección de Búsqueda por DNI -->
+        <div class="section">
+            <h2>🆔 Búsqueda por DNI</h2>
+            <div class="form-group">
+                <label for="dni">DNI:</label>
+                <input type="text" id="dni" placeholder="Ingrese el DNI">
+            </div>
+            <button onclick="searchByDNI()">Buscar por DNI</button>
+        </div>
+
+        <!-- Sección de Búsqueda por Nombre -->
+        <div class="section">
+            <h2>👤 Búsqueda por Nombre</h2>
+            <div class="form-group">
+                <label for="nombres">Nombres:</label>
+                <input type="text" id="nombres" placeholder="Ingrese los nombres">
+            </div>
+            <div class="form-group">
+                <label for="apellido_paterno">Apellido Paterno:</label>
+                <input type="text" id="apellido_paterno" placeholder="Ingrese el apellido paterno">
+            </div>
+            <div class="form-group">
+                <label for="apellido_materno">Apellido Materno:</label>
+                <input type="text" id="apellido_materno" placeholder="Ingrese el apellido materno">
+            </div>
+            <button onclick="searchByName()">Buscar por Nombre</button>
+        </div>
+
+        <!-- Resultados -->
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const API_BASE = '/api/scraper';
+        
+        // Verificar estado al cargar la página
+        window.onload = function() {
+            checkStatus();
+        };
+
+        function showResult(message, isError = false) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `<div class="result ${isError ? 'error' : 'success'}">${message}</div>`;
+        }
+
+        function updateStatus(loggedIn) {
+            const statusDiv = document.getElementById('status');
+            if (loggedIn) {
+                statusDiv.className = 'status logged-in';
+                statusDiv.textContent = 'Estado: Conectado ✅';
+            } else {
+                statusDiv.className = 'status logged-out';
+                statusDiv.textContent = 'Estado: Desconectado ❌';
+            }
+        }
+
+        async function checkStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/status`);
+                const data = await response.json();
+                updateStatus(data.logged_in);
+            } catch (error) {
+                console.error('Error checking status:', error);
+                updateStatus(false);
+            }
+        }
+
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            if (!username || !password) {
+                showResult('Por favor ingrese usuario y contraseña', true);
+                return;
+            }
+
+            try {
+                showResult('Iniciando sesión...');
+                const response = await fetch(`${API_BASE}/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('✅ Sesión iniciada correctamente');
+                    updateStatus(true);
+                    // Limpiar campos
+                    document.getElementById('username').value = '';
+                    document.getElementById('password').value = '';
+                } else {
+                    showResult(`❌ Error: ${data.error}`, true);
+                    updateStatus(false);
+                }
+            } catch (error) {
+                showResult(`❌ Error de conexión: ${error.message}`, true);
+                updateStatus(false);
+            }
+        }
+
+        async function logout() {
+            try {
+                const response = await fetch(`${API_BASE}/logout`, {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                showResult('✅ Sesión cerrada correctamente');
+                updateStatus(false);
+            } catch (error) {
+                showResult(`❌ Error: ${error.message}`, true);
+            }
+        }
+
+        async function searchByDNI() {
+            const dni = document.getElementById('dni').value;
+
+            if (!dni) {
+                showResult('Por favor ingrese un DNI', true);
+                return;
+            }
+
+            try {
+                showResult('Buscando...');
+                const response = await fetch(`${API_BASE}/search/dni`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ dni })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    showResult(`✅ Resultados encontrados:\n\n${JSON.stringify(data.data, null, 2)}`);
+                } else {
+                    showResult(`❌ Error: ${data.error || 'No se encontraron resultados'}`, true);
+                }
+            } catch (error) {
+                showResult(`❌ Error de conexión: ${error.message}`, true);
+            }
+        }
+
+        async function searchByName() {
+            const nombres = document.getElementById('nombres').value;
+            const apellido_paterno = document.getElementById('apellido_paterno').value;
+            const apellido_materno = document.getElementById('apellido_materno').value;
+
+            if (!nombres || !apellido_paterno || !apellido_materno) {
+                showResult('Por favor complete todos los campos de nombre', true);
+                return;
+            }
+
+            try {
+                showResult('Buscando...');
+                const response = await fetch(`${API_BASE}/search/name`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ nombres, apellido_paterno, apellido_materno })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    showResult(`✅ Resultados encontrados:\n\n${JSON.stringify(data.data, null, 2)}`);
+                } else {
+                    showResult(`❌ Error: ${data.error || 'No se encontraron resultados'}`, true);
+                }
+            } catch (error) {
+                showResult(`❌ Error de conexión: ${error.message}`, true);
+            }
+        }
+    </script>
+</body>
+</html>
